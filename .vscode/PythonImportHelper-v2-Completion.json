@@ -1,0 +1,186 @@
+[
+    {
+        "label": "Flask",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "request",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "jsonify",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "CORS",
+        "importPath": "flask_cors",
+        "description": "flask_cors",
+        "isExtraImport": true,
+        "detail": "flask_cors",
+        "documentation": {}
+    },
+    {
+        "label": "joblib",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "joblib",
+        "description": "joblib",
+        "detail": "joblib",
+        "documentation": {}
+    },
+    {
+        "label": "pandas",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pandas",
+        "description": "pandas",
+        "detail": "pandas",
+        "documentation": {}
+    },
+    {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
+        "label": "MinMaxScaler",
+        "importPath": "sklearn.preprocessing",
+        "description": "sklearn.preprocessing",
+        "isExtraImport": true,
+        "detail": "sklearn.preprocessing",
+        "documentation": {}
+    },
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "health_check",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def health_check():\n    return jsonify({\"status\": \"healthy\", \"model_loaded\": model is not None})\n@app.route('/predict', methods=['POST'])\ndef predict():\n    if not model:\n        return jsonify({\"error\": \"Model not active\"}), 503\n    try:\n        # Extract features\n        # Expecting JSON with keys matching the model features\n        data = request.get_json()",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "predict",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def predict():\n    if not model:\n        return jsonify({\"error\": \"Model not active\"}), 503\n    try:\n        # Extract features\n        # Expecting JSON with keys matching the model features\n        data = request.get_json()\n        feature_names = [\n            'Dst Port', 'Flow Byts/s', 'Bwd Pkt Len Mean', 'Fwd Pkt Len Max',\n            'Bwd Pkt Len Max', 'Pkt Len Mean', 'Init Fwd Win Byts', 'Pkt Len Var',",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "app = Flask(__name__)\nCORS(app)  # Enable CORS for all routes\n# Load model\nMODEL_PATH = '../../ML_Model/model/model_RandomForest.pkl'\nSCALER_PATH = '../../ML_Model/model/scaler.pkl'\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "MODEL_PATH",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "MODEL_PATH = '../../ML_Model/model/model_RandomForest.pkl'\nSCALER_PATH = '../../ML_Model/model/scaler.pkl'\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "SCALER_PATH",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "SCALER_PATH = '../../ML_Model/model/scaler.pkl'\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")\n@app.route('/health', methods=['GET'])",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "model",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "model = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")\n@app.route('/health', methods=['GET'])\ndef health_check():",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "scaler",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "scaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")\n@app.route('/health', methods=['GET'])\ndef health_check():\n    return jsonify({\"status\": \"healthy\", \"model_loaded\": model is not None})",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "_Known",
+        "kind": 6,
+        "importPath": "frontend.node_modules.flatted.python.flatted",
+        "description": "frontend.node_modules.flatted.python.flatted",
+        "peekOfCode": "class _Known:\n    def __init__(self):\n        self.key = []\n        self.value = []\nclass _String:\n    def __init__(self, value):\n        self.value = value\ndef _array_keys(value):\n    keys = []\n    i = 0",
+        "detail": "frontend.node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "_String",
+        "kind": 6,
+        "importPath": "frontend.node_modules.flatted.python.flatted",
+        "description": "frontend.node_modules.flatted.python.flatted",
+        "peekOfCode": "class _String:\n    def __init__(self, value):\n        self.value = value\ndef _array_keys(value):\n    keys = []\n    i = 0\n    for _ in value:\n        keys.append(i)\n        i += 1\n    return keys",
+        "detail": "frontend.node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "parse",
+        "kind": 2,
+        "importPath": "frontend.node_modules.flatted.python.flatted",
+        "description": "frontend.node_modules.flatted.python.flatted",
+        "peekOfCode": "def parse(value, *args, **kwargs):\n    json = _json.loads(value, *args, **kwargs)\n    wrapped = []\n    for value in json:\n        wrapped.append(_wrap(value))\n    input = []\n    for value in wrapped:\n        if isinstance(value, _String):\n            input.append(value.value)\n        else:",
+        "detail": "frontend.node_modules.flatted.python.flatted",
+        "documentation": {}
+    },
+    {
+        "label": "stringify",
+        "kind": 2,
+        "importPath": "frontend.node_modules.flatted.python.flatted",
+        "description": "frontend.node_modules.flatted.python.flatted",
+        "peekOfCode": "def stringify(value, *args, **kwargs):\n    known = _Known()\n    input = []\n    output = []\n    i = int(_index(known, input, value))\n    while i < len(input):\n        output.append(_transform(known, input, input[i]))\n        i += 1\n    return _json.dumps(output, *args, **kwargs)",
+        "detail": "frontend.node_modules.flatted.python.flatted",
+        "documentation": {}
+    }
+]
