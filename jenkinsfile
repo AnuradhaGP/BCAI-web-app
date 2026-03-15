@@ -9,8 +9,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                // Checkout source code from the repository
-                checkout scm
+                git branch: 'main', url: 'https://github.com/AnuradhaGP/BCAI-web-app.git'
             }
         }
 
@@ -19,10 +18,10 @@ pipeline {
                 script {
                     echo "Building and deploying containers using Docker Compose..."
                     // Shut down existing containers if any
-                    sh 'docker-compose down'
+                    sh 'docker compose down'
                     
                     // Build new images and run them in background (-d)
-                    sh 'docker-compose up -d --build'
+                    sh 'docker compose up -d --build'
                 }
             }
         }
@@ -32,7 +31,7 @@ pipeline {
                 script {
                     echo "Verifying running services..."
                     // List the running containers to ensure they are up
-                    sh 'docker-compose ps'
+                    sh 'docker compose ps'
                 }
             }
         }
@@ -45,10 +44,10 @@ pipeline {
             // sh 'docker image prune -f'
         }
         success {
-            echo "✅ Successfully deployed BCAI Web App to DigitalOcean Droplet!"
+            echo "Successfully deployed BCAI Web App to DigitalOcean Droplet!"
         }
         failure {
-            echo "❌ Deployment failed. Please check the Jenkins logs."
+            echo "Deployment failed. Please check the Jenkins logs."
         }
     }
 }

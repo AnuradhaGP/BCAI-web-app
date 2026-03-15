@@ -12,10 +12,11 @@ const AiDashboard = () => {
     // Live Monitoring capabilities
     const [isMonitoring, setIsMonitoring] = useState(false);
     const [liveData, setLiveData] = useState([]);
+    const HOST ="http://206.189.128.176:5000/"
 
     useEffect(() => {
         // Fetch initial status
-        axios.get("http://localhost:5000/api/monitoring/status")
+        axios.get(HOST+"/api/monitoring/status")
              .then(res => setIsMonitoring(res.data.monitoring_active))
              .catch(err => console.error("Could not fetch status", err));
     }, []);
@@ -24,7 +25,7 @@ const AiDashboard = () => {
         let interval;
         if (isMonitoring) {
             interval = setInterval(() => {
-                axios.get("http://localhost:5000/api/monitoring/data")
+                axios.get(HOST+"/api/monitoring/data")
                      .then(res => {
                          setLiveData(res.data.data);
                      })
@@ -41,7 +42,7 @@ const AiDashboard = () => {
         setResult(null);
         console.log(data);
         try {
-            const response = await axios.post("http://localhost:5000/predict", data, {
+            const response = await axios.post(HOST+"/predict", data, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
