@@ -4,7 +4,8 @@ import io from "socket.io-client";
 import { Shield, CheckCircle, AlertTriangle, Clock, Hash, FileCode, RefreshCw, Box, Bell } from "lucide-react";
 
 // Initialize Socket.io connection to Blockchain App
-const socket = io("http://localhost:3000");
+const HOST = "http://206.189.128.176:5173"
+const socket = io(HOST);
 
 const BlockchainDashboard = () => {
     const [builds, setBuilds] = useState([]);
@@ -16,7 +17,7 @@ const BlockchainDashboard = () => {
     const fetchBuilds = async () => {
         setLoading(true);
         try {
-            const response = await axios.get("http://localhost:3000/all");
+            const response = await axios.get(HOST+"/all");
             setBuilds(response.data);
             setError(null);
         } catch (err) {
@@ -27,23 +28,23 @@ const BlockchainDashboard = () => {
         }
     };
 
-    useEffect(() => {
-        fetchBuilds();
+    // useEffect(() => {
+    //     fetchBuilds();
 
-        // Listen for real-time alerts
-        socket.on("verification_success", (data) => {
-            addAlert({ type: "success", message: `Build ${data.buildId} Verified Successfully!`, time: new Date() });
-        });
+    //     // Listen for real-time alerts
+    //     socket.on("verification_success", (data) => {
+    //         addAlert({ type: "success", message: `Build ${data.buildId} Verified Successfully!`, time: new Date() });
+    //     });
 
-        socket.on("tamper_alert", (data) => {
-            addAlert({ type: "error", message: `SECURITY ALERT: Tampering Detected in Build ${data.buildId}!`, details: data.error, time: new Date() });
-        });
+    //     socket.on("tamper_alert", (data) => {
+    //         addAlert({ type: "error", message: `SECURITY ALERT: Tampering Detected in Build ${data.buildId}!`, details: data.error, time: new Date() });
+    //     });
 
-        return () => {
-            socket.off("verification_success");
-            socket.off("tamper_alert");
-        };
-    }, []);
+    //     return () => {
+    //         socket.off("verification_success");
+    //         socket.off("tamper_alert");
+    //     };
+    // }, []);
 
     const addAlert = (alert) => {
         setAlerts((prev) => [alert, ...prev].slice(0, 5)); // Keep last 5 alerts
@@ -57,7 +58,7 @@ const BlockchainDashboard = () => {
         setVerifyingId(buildId);
         try {
             // We don't await the response here entirely because the real confirmation comes via socket
-            await axios.post("http://localhost:3000/verify", {
+            await axios.post(HOST+ "/verify", {
                 buildId,
                 currentHash
             });
