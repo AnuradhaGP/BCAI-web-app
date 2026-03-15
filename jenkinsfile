@@ -18,10 +18,10 @@ pipeline {
                 script {
                     echo "Building and deploying containers using Docker Compose..."
                     // Shut down existing containers if any
-                    sh 'docker compose down'
+                    sh 'docker-compose down'
                     
                     // Build new images and run them in background (-d)
-                    sh 'docker compose up -d --build'
+                    sh 'docker-compose up -d --build'
                 }
             }
         }
@@ -31,7 +31,7 @@ pipeline {
                 script {
                     echo "Verifying running services..."
                     // List the running containers to ensure they are up
-                    sh 'docker compose ps'
+                    sh 'docker-compose ps'
                 }
             }
         }
