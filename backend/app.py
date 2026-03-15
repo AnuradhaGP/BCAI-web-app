@@ -180,4 +180,4 @@ def get_monitoring_data():
     return jsonify({"data": realtime_data})
 
 if __name__ == '__main__':
-    app.run(host="http://206.189.128.176/", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
