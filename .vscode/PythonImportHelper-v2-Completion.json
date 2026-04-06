@@ -76,6 +76,73 @@
         "documentation": {}
     },
     {
+        "label": "time",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "time",
+        "description": "time",
+        "detail": "time",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "threading",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "threading",
+        "description": "threading",
+        "detail": "threading",
+        "documentation": {}
+    },
+    {
+        "label": "defaultdict",
+        "importPath": "collections",
+        "description": "collections",
+        "isExtraImport": true,
+        "detail": "collections",
+        "documentation": {}
+    },
+    {
+        "label": "sniff",
+        "importPath": "scapy.all",
+        "description": "scapy.all",
+        "isExtraImport": true,
+        "detail": "scapy.all",
+        "documentation": {}
+    },
+    {
+        "label": "IP",
+        "importPath": "scapy.all",
+        "description": "scapy.all",
+        "isExtraImport": true,
+        "detail": "scapy.all",
+        "documentation": {}
+    },
+    {
+        "label": "TCP",
+        "importPath": "scapy.all",
+        "description": "scapy.all",
+        "isExtraImport": true,
+        "detail": "scapy.all",
+        "documentation": {}
+    },
+    {
+        "label": "UDP",
+        "importPath": "scapy.all",
+        "description": "scapy.all",
+        "isExtraImport": true,
+        "detail": "scapy.all",
+        "documentation": {}
+    },
+    {
         "label": "json",
         "kind": 6,
         "isExtraImport": true,
@@ -89,7 +156,7 @@
         "kind": 2,
         "importPath": "backend.app",
         "description": "backend.app",
-        "peekOfCode": "def health_check():\n    return jsonify({\"status\": \"healthy\", \"model_loaded\": model is not None})\n@app.route('/predict', methods=['POST'])\ndef predict():\n    if not model:\n        return jsonify({\"error\": \"Model not active\"}), 503\n    try:\n        # Extract features\n        # Expecting JSON with keys matching the model features\n        data = request.get_json()",
+        "peekOfCode": "def health_check():\n    return jsonify({\"status\": \"healthy\", \"model_loaded\": model is not None})\n@app.route('/predict', methods=['POST'])\ndef predict():\n    if not model:\n        return jsonify({\"error\": \"Model not active\"}), 503\n    try:\n        data = request.get_json()\n        features = {name: float(data.get(name) or 0) for name in feature_names}\n        df = pd.DataFrame([features])",
         "detail": "backend.app",
         "documentation": {}
     },
@@ -98,7 +165,61 @@
         "kind": 2,
         "importPath": "backend.app",
         "description": "backend.app",
-        "peekOfCode": "def predict():\n    if not model:\n        return jsonify({\"error\": \"Model not active\"}), 503\n    try:\n        # Extract features\n        # Expecting JSON with keys matching the model features\n        data = request.get_json()\n        feature_names = [\n            'Dst Port', 'Flow Byts/s', 'Bwd Pkt Len Mean', 'Fwd Pkt Len Max',\n            'Bwd Pkt Len Max', 'Pkt Len Mean', 'Init Fwd Win Byts', 'Pkt Len Var',",
+        "peekOfCode": "def predict():\n    if not model:\n        return jsonify({\"error\": \"Model not active\"}), 503\n    try:\n        data = request.get_json()\n        features = {name: float(data.get(name) or 0) for name in feature_names}\n        df = pd.DataFrame([features])\n        df = scaler.transform(df)\n        prediction = model.predict(df)[0]\n        risk_level = \"LOW\" if prediction == 0 else \"HIGH\"",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "process_packet",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def process_packet(pkt):\n    if not monitoring_active:\n        return\n    if pkt.haslayer(IP) and (pkt.haslayer(TCP) or pkt.haslayer(UDP)):\n        src = pkt[IP].src\n        dst = pkt[IP].dst\n        sport = pkt[TCP].sport if pkt.haslayer(TCP) else pkt[UDP].sport\n        dport = pkt[TCP].dport if pkt.haslayer(TCP) else pkt[UDP].dport\n        length = len(pkt)\n        time_sec = float(pkt.time)",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "sniff_traffic",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def sniff_traffic():\n    global monitoring_active\n    try:\n        # Filter can be adapted, right now sniffs IP packets\n        sniff(prn=process_packet, store=False)\n    except Exception as e:\n        print(f\"Sniffing error: {e}\")\ndef analyze_flows():\n    global flows, realtime_data, monitoring_active\n    while True:",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "analyze_flows",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def analyze_flows():\n    global flows, realtime_data, monitoring_active\n    while True:\n        if monitoring_active and len(flows) > 0 and model:\n            try:\n                # Find the flow with the most packets in this window\n                largest_flow_key = max(flows.keys(), key=lambda k: flows[k]['fwd_pkts'])\n                flow = flows[largest_flow_key]\n                duration = max(flow['last_time'] - flow['start_time'], 0.001)\n                fwd_pkts = flow['fwd_pkts']",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "get_monitoring_status",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def get_monitoring_status():\n    return jsonify({\"monitoring_active\": monitoring_active})\n@app.route('/api/monitoring/toggle', methods=['POST'])\ndef toggle_monitoring():\n    global monitoring_active, realtime_data, flows\n    data = request.get_json()\n    monitoring_active = data.get(\"active\", False)\n    if monitoring_active:\n        realtime_data.clear()\n        flows.clear()",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "toggle_monitoring",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def toggle_monitoring():\n    global monitoring_active, realtime_data, flows\n    data = request.get_json()\n    monitoring_active = data.get(\"active\", False)\n    if monitoring_active:\n        realtime_data.clear()\n        flows.clear()\n    return jsonify({\"monitoring_active\": monitoring_active})\n@app.route('/api/monitoring/data', methods=['GET'])\ndef get_monitoring_data():",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "get_monitoring_data",
+        "kind": 2,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "def get_monitoring_data():\n    return jsonify({\"data\": realtime_data})\nif __name__ == '__main__':\n    app.run(host=\"0.0.0.0\", port=5000, debug=True)",
         "detail": "backend.app",
         "documentation": {}
     },
@@ -107,7 +228,16 @@
         "kind": 5,
         "importPath": "backend.app",
         "description": "backend.app",
-        "peekOfCode": "app = Flask(__name__)\nCORS(app)  # Enable CORS for all routes\n# Load model\nMODEL_PATH = '../../ML_Model/model/model_RandomForest.pkl'\nSCALER_PATH = '../../ML_Model/model/scaler.pkl'\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)",
+        "peekOfCode": "app = Flask(__name__)\nCORS(app)  # Enable CORS for all routes\n# Load model\nBASE_DIR = os.path.dirname(os.path.abspath(__file__))\nMODEL_PATH = os.path.join(BASE_DIR, 'model', 'model_RandomForest.pkl')\nSCALER_PATH = os.path.join(BASE_DIR, 'model', 'scaler.pkl')\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "BASE_DIR",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "BASE_DIR = os.path.dirname(os.path.abspath(__file__))\nMODEL_PATH = os.path.join(BASE_DIR, 'model', 'model_RandomForest.pkl')\nSCALER_PATH = os.path.join(BASE_DIR, 'model', 'scaler.pkl')\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:",
         "detail": "backend.app",
         "documentation": {}
     },
@@ -116,7 +246,7 @@
         "kind": 5,
         "importPath": "backend.app",
         "description": "backend.app",
-        "peekOfCode": "MODEL_PATH = '../../ML_Model/model/model_RandomForest.pkl'\nSCALER_PATH = '../../ML_Model/model/scaler.pkl'\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")",
+        "peekOfCode": "MODEL_PATH = os.path.join(BASE_DIR, 'model', 'model_RandomForest.pkl')\nSCALER_PATH = os.path.join(BASE_DIR, 'model', 'scaler.pkl')\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(f\"Model not found at {MODEL_PATH}\")",
         "detail": "backend.app",
         "documentation": {}
     },
@@ -125,7 +255,7 @@
         "kind": 5,
         "importPath": "backend.app",
         "description": "backend.app",
-        "peekOfCode": "SCALER_PATH = '../../ML_Model/model/scaler.pkl'\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")\n@app.route('/health', methods=['GET'])",
+        "peekOfCode": "SCALER_PATH = os.path.join(BASE_DIR, 'model', 'scaler.pkl')\nmodel = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(f\"Model not found at {MODEL_PATH}\")\nfeature_names = [",
         "detail": "backend.app",
         "documentation": {}
     },
@@ -134,7 +264,7 @@
         "kind": 5,
         "importPath": "backend.app",
         "description": "backend.app",
-        "peekOfCode": "model = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")\n@app.route('/health', methods=['GET'])\ndef health_check():",
+        "peekOfCode": "model = None\nscaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(f\"Model not found at {MODEL_PATH}\")\nfeature_names = [\n            'Dst Port', 'Flow Byts/s', 'Bwd Pkt Len Mean', 'Fwd Pkt Len Max',",
         "detail": "backend.app",
         "documentation": {}
     },
@@ -143,7 +273,43 @@
         "kind": 5,
         "importPath": "backend.app",
         "description": "backend.app",
-        "peekOfCode": "scaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(\"Model not found. \")\n@app.route('/health', methods=['GET'])\ndef health_check():\n    return jsonify({\"status\": \"healthy\", \"model_loaded\": model is not None})",
+        "peekOfCode": "scaler = None\nif os.path.exists(MODEL_PATH):\n    model = joblib.load(MODEL_PATH)\n    scaler = joblib.load(SCALER_PATH)\n    print(\"Model loaded successfully.\")\nelse:\n    print(f\"Model not found at {MODEL_PATH}\")\nfeature_names = [\n            'Dst Port', 'Flow Byts/s', 'Bwd Pkt Len Mean', 'Fwd Pkt Len Max',\n            'Bwd Pkt Len Max', 'Pkt Len Mean', 'Init Fwd Win Byts', 'Pkt Len Var',",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "feature_names",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "feature_names = [\n            'Dst Port', 'Flow Byts/s', 'Bwd Pkt Len Mean', 'Fwd Pkt Len Max',\n            'Bwd Pkt Len Max', 'Pkt Len Mean', 'Init Fwd Win Byts', 'Pkt Len Var',\n            'Flow Pkts/s', 'Flow Duration', 'Flow IAT Max', 'Bwd Pkts/s',\n            'Tot Fwd Pkts', 'Flow IAT Mean', 'Fwd Seg Size Min', 'Tot Bwd Pkts',\n            'Init Bwd Win Byts', 'Bwd IAT Tot', 'Bwd IAT Max', 'Bwd IAT Mean'\n        ]\n@app.route('/health', methods=['GET'])\ndef health_check():\n    return jsonify({\"status\": \"healthy\", \"model_loaded\": model is not None})",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "monitoring_active",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "monitoring_active = False\nrealtime_data = []  # Maximum 50 items\nflows = {}\ndef process_packet(pkt):\n    if not monitoring_active:\n        return\n    if pkt.haslayer(IP) and (pkt.haslayer(TCP) or pkt.haslayer(UDP)):\n        src = pkt[IP].src\n        dst = pkt[IP].dst\n        sport = pkt[TCP].sport if pkt.haslayer(TCP) else pkt[UDP].sport",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "realtime_data",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "realtime_data = []  # Maximum 50 items\nflows = {}\ndef process_packet(pkt):\n    if not monitoring_active:\n        return\n    if pkt.haslayer(IP) and (pkt.haslayer(TCP) or pkt.haslayer(UDP)):\n        src = pkt[IP].src\n        dst = pkt[IP].dst\n        sport = pkt[TCP].sport if pkt.haslayer(TCP) else pkt[UDP].sport\n        dport = pkt[TCP].dport if pkt.haslayer(TCP) else pkt[UDP].dport",
+        "detail": "backend.app",
+        "documentation": {}
+    },
+    {
+        "label": "flows",
+        "kind": 5,
+        "importPath": "backend.app",
+        "description": "backend.app",
+        "peekOfCode": "flows = {}\ndef process_packet(pkt):\n    if not monitoring_active:\n        return\n    if pkt.haslayer(IP) and (pkt.haslayer(TCP) or pkt.haslayer(UDP)):\n        src = pkt[IP].src\n        dst = pkt[IP].dst\n        sport = pkt[TCP].sport if pkt.haslayer(TCP) else pkt[UDP].sport\n        dport = pkt[TCP].dport if pkt.haslayer(TCP) else pkt[UDP].dport\n        length = len(pkt)",
         "detail": "backend.app",
         "documentation": {}
     },
