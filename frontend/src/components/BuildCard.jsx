@@ -58,14 +58,14 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
   };
 
   return (
-    <div className="group bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-purple-500/30 rounded-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)] relative overflow-hidden">
+    <div className="group bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-blue-500/30 rounded-2xl transition-all duration-300  relative overflow-hidden">
       <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       {/* Main Card Content */}
       <div className="flex flex-col md:flex-row gap-6 p-6">
         {/* Icon */}
         <div className="flex-shrink-0">
-          <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform duration-300">
+          <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform duration-300">
             <Box size={24} />
           </div>
         </div>
@@ -117,25 +117,25 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
             {/* Log CID - clickable accordion trigger */}
             <div
               onClick={handleLogToggle}
-              className="bg-black/30 rounded-lg p-3 border border-white/5 hover:border-purple-500/40 transition-colors cursor-pointer group/log"
+              className="bg-black/30 rounded-lg p-3 border border-white/5 hover:border-blue-500/40 transition-colors cursor-pointer group/log"
             >
               <span className="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-1 flex items-center justify-between">
                 <span className="flex items-center gap-1">
                   <FileCode size={10} /> Log CID
                 </span>
                 {logLoading ? (
-                  <Loader size={10} className="animate-spin text-purple-400" />
+                  <Loader size={10} className="animate-spin text-blue-400" />
                 ) : logOpen ? (
-                  <ChevronUp size={10} className="text-purple-400" />
+                  <ChevronUp size={10} className="text-blue-400" />
                 ) : (
                   <ChevronDown
                     size={10}
-                    className="text-gray-500 group-hover/log:text-purple-400"
+                    className="text-gray-500 group-hover/log:text-blue-400"
                   />
                 )}
               </span>
               {record.logCid ? (
-                <p className="text-xs text-purple-400 group-hover/log:text-purple-300 font-mono break-all transition-colors">
+                <p className="text-xs text-blue-400 group-hover/log:text-blue-300 font-mono break-all transition-colors">
                   {record.logCid.slice(0, 20)}...
                 </p>
               ) : (
