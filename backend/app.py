@@ -78,81 +78,102 @@ def process_packet(pkt):
     if not monitoring_active:
         return
 
-    if pkt.haslayer(IP) and (pkt.haslayer(TCP) or pkt.haslayer(UDP)):
-         src   = pkt[IP].src
-    dst   = pkt[IP].dst
-    proto = pkt[TCP] if pkt.haslayer(TCP) else pkt[UDP]
-    sport = proto.sport
-    dport = proto.dport
-    length = len(pkt)
-    ts     = float(pkt.time)
+    try:
+        if not pkt.haslayer(IP):
+            return
 
-    # Bidirectional flow key
-    fwd_key = (src, sport, dst, dport)
-    bwd_key = (dst, dport, src, sport)
+        is_tcp = pkt.haslayer(TCP)
+        is_udp = pkt.haslayer(UDP)
 
-    with flows_lock:
-        # Flow exist ද check කරනවා - fwd හෝ bwd
-        if fwd_key in flows:
-            key      = fwd_key
-            direction = 'fwd'
-        elif bwd_key in flows:
-            key       = bwd_key
-            direction = 'bwd'
+        if not (is_tcp or is_udp):
+            return
+
+        src    = pkt[IP].src
+        dst    = pkt[IP].dst
+        length = len(pkt)
+        ts     = float(pkt.time)
+
+        if is_tcp:
+            sport = pkt[TCP].sport
+            dport = pkt[TCP].dport
         else:
-            # New flow - fwd direction
-            key       = fwd_key
-            direction = 'fwd'
-            flows[key] = {
-                'start_time'   : ts,
-                'last_time'    : ts,
-                'fwd_pkts'     : 0,
-                'fwd_bytes'    : 0,
-                'bwd_pkts'     : 0,
-                'bwd_bytes'    : 0,
-                'fwd_pkt_lens' : [],
-                'bwd_pkt_lens' : [],
-                'fwd_iats'     : [],
-                'bwd_iats'     : [],
-                'last_fwd_time': ts,
-                'last_bwd_time': ts,
-                'init_fwd_win' : 0,
-                'init_bwd_win' : 0,
-                'pkt_lens'     : [],
-                'flow_iats'    : [],
-                'last_pkt_time': ts,
-            }
+            sport = pkt[UDP].sport
+            dport = pkt[UDP].dport
 
-        flow = flows[key]
+        fwd_key = (src, sport, dst, dport)
+        bwd_key = (dst, dport, src, sport)
 
-        # IAT calculate
-        iat = ts - flow['last_pkt_time']
-        flow['flow_iats'].append(iat)
-        flow['last_pkt_time'] = ts
-        flow['last_time']     = ts
-        flow['pkt_lens'].append(length)
+        with flows_lock:
+            if fwd_key in flows:
+                key       = fwd_key
+                direction = 'fwd'
+            elif bwd_key in flows:
+                key       = bwd_key
+                direction = 'bwd'
+            else:
+                key       = fwd_key
+                direction = 'fwd'
+                flows[key] = {
+                    'start_time'   : ts,
+                    'last_time'    : ts,
+                    'last_pkt_time': ts,
+                    'last_fwd_time': ts,
+                    'last_bwd_time': ts,
+                    'fwd_pkts'     : 0,
+                    'fwd_bytes'    : 0,
+                    'bwd_pkts'     : 0,
+                    'bwd_bytes'    : 0,
+                    'fwd_pkt_lens' : [],
+                    'bwd_pkt_lens' : [],
+                    'fwd_iats'     : [],
+                    'bwd_iats'     : [],
+                    'flow_iats'    : [],
+                    'init_fwd_win' : 0,
+                    'init_bwd_win' : 0,
+                    'pkt_lens'     : [],
+                }
 
-        if direction == 'fwd':
-            fwd_iat = ts - flow['last_fwd_time']
-            flow['fwd_pkts']      += 1
-            flow['fwd_bytes']     += length
-            flow['fwd_pkt_lens'].append(length)
-            flow['fwd_iats'].append(fwd_iat)
-            flow['last_fwd_time'] = ts
+            flow = flows[key]
+            iat  = ts - flow['last_pkt_time']
+            flow['flow_iats'].append(iat)
+            flow['last_pkt_time'] = ts
+            flow['last_time']     = ts
+            flow['pkt_lens'].append(length)
 
-            # Init window size (TCP)
-            if pkt.haslayer(TCP) and flow['fwd_pkts'] == 1:
-                flow['init_fwd_win'] = pkt[TCP].window
-        else:
-            bwd_iat = ts - flow['last_bwd_time']
-            flow['bwd_pkts']      += 1
-            flow['bwd_bytes']     += length
-            flow['bwd_pkt_lens'].append(length)
-            flow['bwd_iats'].append(bwd_iat)
-            flow['last_bwd_time'] = ts
+            if direction == 'fwd':
+                flow['fwd_pkts']  += 1
+                flow['fwd_bytes'] += length
+                flow['fwd_pkt_lens'].append(length)
+                flow['fwd_iats'].append(ts - flow['last_fwd_time'])
+                flow['last_fwd_time'] = ts
+                if is_tcp and flow['fwd_pkts'] == 1:
+                    flow['init_fwd_win'] = pkt[TCP].window
+            else:
+                flow['bwd_pkts']  += 1
+                flow['bwd_bytes'] += length
+                flow['bwd_pkt_lens'].append(length)
+                flow['bwd_iats'].append(ts - flow['last_bwd_time'])
+                flow['last_bwd_time'] = ts
+                if is_tcp and flow['bwd_pkts'] == 1:
+                    flow['init_bwd_win'] = pkt[TCP].window
 
-            if pkt.haslayer(TCP) and flow['bwd_pkts'] == 1:
-                flow['init_bwd_win'] = pkt[TCP].window
+    except Exception as e:
+        print(f"Packet processing error: {e}")
+
+
+def sniff_traffic():
+    while True:  # ✅ crash වුණොත් restart
+        try:
+            print("Starting packet capture on eth0...")
+            sniff(
+                iface="eth0",
+                prn=process_packet,
+                store=False,
+                filter="tcp or udp"
+            )
+        except Exception as e:
+            print(f"Sniffing error: {e} - Restarting in 2s...")
+            time.sleep(2)
 
 def extract_features(flow, dst_port):
     """Flow එකෙන් model features හදනවා"""
