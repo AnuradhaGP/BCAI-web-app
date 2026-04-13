@@ -71,7 +71,7 @@ def predict():
 # ----- REAL-TIME MONITORING LOGIC -----
 monitoring_active = False
 realtime_data = []  # Maximum 50 items
-flows = {}\
+flows = {}
 flows_lock = threading.Lock()
 
 def process_packet(pkt):
