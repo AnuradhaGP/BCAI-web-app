@@ -96,7 +96,7 @@ const BlockchainDashboard = () => {
 
             {/* Header */}
             <header className="mb-10 text-center space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-xs font-medium text-purple-400 mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-medium text-blue-400 mb-4">
                     <Box size={12} />
                     <span>Immutable Ledger v1.0</span>
                 </div>
