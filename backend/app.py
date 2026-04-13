@@ -78,25 +78,132 @@ def process_packet(pkt):
         return
 
     if pkt.haslayer(IP) and (pkt.haslayer(TCP) or pkt.haslayer(UDP)):
-        src = pkt[IP].src
-        dst = pkt[IP].dst
-        sport = pkt[TCP].sport if pkt.haslayer(TCP) else pkt[UDP].sport
-        dport = pkt[TCP].dport if pkt.haslayer(TCP) else pkt[UDP].dport
-        length = len(pkt)
-        time_sec = float(pkt.time)
-        
-        flow_key = (src, sport, dst, dport)
-        if flow_key not in flows:
-            flows[flow_key] = {
-                'start_time': time_sec,
-                'last_time': time_sec,
-                'fwd_pkts': 0,
-                'fwd_bytes': 0,
+         src   = pkt[IP].src
+    dst   = pkt[IP].dst
+    proto = pkt[TCP] if pkt.haslayer(TCP) else pkt[UDP]
+    sport = proto.sport
+    dport = proto.dport
+    length = len(pkt)
+    ts     = float(pkt.time)
+
+    # Bidirectional flow key
+    fwd_key = (src, sport, dst, dport)
+    bwd_key = (dst, dport, src, sport)
+
+    with flows_lock:
+        # Flow exist ද check කරනවා - fwd හෝ bwd
+        if fwd_key in flows:
+            key      = fwd_key
+            direction = 'fwd'
+        elif bwd_key in flows:
+            key       = bwd_key
+            direction = 'bwd'
+        else:
+            # New flow - fwd direction
+            key       = fwd_key
+            direction = 'fwd'
+            flows[key] = {
+                'start_time'   : ts,
+                'last_time'    : ts,
+                'fwd_pkts'     : 0,
+                'fwd_bytes'    : 0,
+                'bwd_pkts'     : 0,
+                'bwd_bytes'    : 0,
+                'fwd_pkt_lens' : [],
+                'bwd_pkt_lens' : [],
+                'fwd_iats'     : [],
+                'bwd_iats'     : [],
+                'last_fwd_time': ts,
+                'last_bwd_time': ts,
+                'init_fwd_win' : 0,
+                'init_bwd_win' : 0,
+                'pkt_lens'     : [],
+                'flow_iats'    : [],
+                'last_pkt_time': ts,
             }
-        
-        flows[flow_key]['fwd_pkts'] += 1
-        flows[flow_key]['fwd_bytes'] += length
-        flows[flow_key]['last_time'] = time_sec
+
+        flow = flows[key]
+
+        # IAT calculate
+        iat = ts - flow['last_pkt_time']
+        flow['flow_iats'].append(iat)
+        flow['last_pkt_time'] = ts
+        flow['last_time']     = ts
+        flow['pkt_lens'].append(length)
+
+        if direction == 'fwd':
+            fwd_iat = ts - flow['last_fwd_time']
+            flow['fwd_pkts']      += 1
+            flow['fwd_bytes']     += length
+            flow['fwd_pkt_lens'].append(length)
+            flow['fwd_iats'].append(fwd_iat)
+            flow['last_fwd_time'] = ts
+
+            # Init window size (TCP)
+            if pkt.haslayer(TCP) and flow['fwd_pkts'] == 1:
+                flow['init_fwd_win'] = pkt[TCP].window
+        else:
+            bwd_iat = ts - flow['last_bwd_time']
+            flow['bwd_pkts']      += 1
+            flow['bwd_bytes']     += length
+            flow['bwd_pkt_lens'].append(length)
+            flow['bwd_iats'].append(bwd_iat)
+            flow['last_bwd_time'] = ts
+
+            if pkt.haslayer(TCP) and flow['bwd_pkts'] == 1:
+                flow['init_bwd_win'] = pkt[TCP].window
+
+def extract_features(flow, dst_port):
+    """Flow එකෙන් model features හදනවා"""
+    duration    = max(flow['last_time'] - flow['start_time'], 0.000001)
+    fwd_pkts    = flow['fwd_pkts']
+    bwd_pkts    = flow['bwd_pkts']
+    fwd_bytes   = flow['fwd_bytes']
+    bwd_bytes   = flow['bwd_bytes']
+    total_pkts  = fwd_pkts + bwd_pkts
+    total_bytes = fwd_bytes + bwd_bytes
+    all_lens    = flow['pkt_lens']
+    bwd_lens    = flow['bwd_pkt_lens']
+    fwd_lens    = flow['fwd_pkt_lens']
+    flow_iats   = flow['flow_iats']
+    bwd_iats    = flow['bwd_iats']
+
+    import numpy as np
+
+    def safe_mean(lst):
+        return float(np.mean(lst)) if lst else 0.0
+
+    def safe_max(lst):
+        return float(np.max(lst)) if lst else 0.0
+
+    def safe_var(lst):
+        return float(np.var(lst)) if lst else 0.0
+
+    features = {
+        'Dst Port'         : float(dst_port),
+        'Flow Byts/s'      : float(total_bytes / duration),
+        'Bwd Pkt Len Mean' : safe_mean(bwd_lens),
+        'Fwd Pkt Len Max'  : safe_max(fwd_lens),
+        'Bwd Pkt Len Max'  : safe_max(bwd_lens),
+        'Pkt Len Mean'     : safe_mean(all_lens),
+        'Init Fwd Win Byts': float(flow['init_fwd_win']),
+        'Pkt Len Var'      : safe_var(all_lens),
+        'Flow Pkts/s'      : float(total_pkts / duration),
+        'Flow Duration'    : duration * 1000000,
+        'Flow IAT Max'     : safe_max(flow_iats),
+        'Bwd Pkts/s'       : float(bwd_pkts / duration),
+        'Tot Fwd Pkts'     : float(fwd_pkts),
+        'Flow IAT Mean'    : safe_mean(flow_iats),
+        'Fwd Seg Size Min' : float(min(fwd_lens)) if fwd_lens else 0.0,
+        'Tot Bwd Pkts'     : float(bwd_pkts),
+        'Init Bwd Win Byts': float(flow['init_bwd_win']),
+        'Bwd IAT Tot'      : float(sum(bwd_iats)),
+        'Bwd IAT Max'      : safe_max(bwd_iats),
+        'Bwd IAT Mean'     : safe_mean(bwd_iats),
+    }
+
+    return features
+
 
 def sniff_traffic():
     global monitoring_active
@@ -108,52 +215,61 @@ def sniff_traffic():
 
 def analyze_flows():
     global flows, realtime_data, monitoring_active
+
     while True:
-        if monitoring_active and len(flows) > 0 and model:
+        time.sleep(3)  # 3 second window
+
+        if not monitoring_active or not model:
+            continue
+
+        with flows_lock:
+            if not flows:
+                continue
+
+            snapshot = dict(flows)
+            flows.clear()
+
+        # සියලු flows analyze කරනවා
+        for flow_key, flow in snapshot.items():
             try:
-                # Find the flow with the most packets in this window
-                largest_flow_key = max(flows.keys(), key=lambda k: flows[k]['fwd_pkts'])
-                flow = flows[largest_flow_key]
-                
-                duration = max(flow['last_time'] - flow['start_time'], 0.001)
-                fwd_pkts = flow['fwd_pkts']
-                fwd_bytes = flow['fwd_bytes']
-                dst_port = largest_flow_key[3]
-                
-                # Approximate 20 features
-                features = {name: 0.0 for name in feature_names}
-                features['Dst Port'] = float(dst_port)
-                features['Flow Duration'] = duration * 1000000 
-                features['Tot Fwd Pkts'] = float(fwd_pkts)
-                features['Flow Byts/s'] = float(fwd_bytes / duration)
-                features['Flow Pkts/s'] = float(fwd_pkts / duration)
-                features['Pkt Len Mean'] = float(fwd_bytes / fwd_pkts if fwd_pkts > 0 else 0)
-                
-                df = pd.DataFrame([features])
-                df_scaled = scaler.transform(df)
+                if flow['fwd_pkts'] < 2:
+                    continue
+
+                dst_port = flow_key[2]  # fwd_key = (src, sport, dst, dport)
+                dst_port = flow_key[3]
+                features = extract_features(flow, dst_port)
+
+                import pandas as pd
+                df         = pd.DataFrame([features])
+                df_scaled  = scaler.transform(df)
+
                 prediction = model.predict(df_scaled)[0]
                 risk_level = "BENIGN" if prediction == 0 else "ATTACK"
-                
-                from datetime import datetime
+
+
                 new_entry = {
-                    "time": datetime.now().strftime("%H:%M:%S"),
-                    "dst_port": dst_port,
-                    "flow_duration": round(duration, 4),
-                    "fwd_pkts": fwd_pkts,
-                    "risk_level": risk_level,
-                    "prediction": int(prediction)
+                    "time"         : datetime.now().strftime("%H:%M:%S"),
+                    "dst_port"     : dst_port,
+                    "flow_duration": round(flow['last_time'] - flow['start_time'], 4),
+                    "fwd_pkts"     : flow['fwd_pkts'],
+                    "bwd_pkts"     : flow['bwd_pkts'],
+                    "risk_level"   : risk_level,
+                    "prediction"   : int(prediction)
                 }
-                
+                print(f"Features: {features}")
+                print(f"Scaled: {df_scaled}")
+                print(f"Prediction: {prediction}")
+
                 realtime_data.append(new_entry)
                 if len(realtime_data) > 50:
                     realtime_data.pop(0)
-                
+
+                if risk_level == "ATTACK":
+                    print(f"ATTACK detected! Port: {dst_port}, "
+                          f"Pkts: {flow['fwd_pkts']}, Features: {features}")
+
             except Exception as e:
-                print(f"Analysis error: {e}")
-            
-            # Clear flows for the next window
-            flows.clear()
-        time.sleep(2)
+                print(f"Flow analysis error: {e}")
 
 threading.Thread(target=analyze_flows, daemon=True).start()
 
