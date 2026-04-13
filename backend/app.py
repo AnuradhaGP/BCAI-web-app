@@ -332,12 +332,14 @@
 
 from flask import Flask
 from flask_cors import CORS
-from socket_manager import socketio
+from flask_socketio import SocketIO
 from routes.predict_routes    import predict_bp
 from routes.monitoring_routes import monitoring_bp
 from services.flow_service    import flow_service
 from services.capture_service import capture_service
 from services.model_service   import model_service
+
+socketio = SocketIO(cors_allowed_origins="*")
 
 def create_app():
     app = Flask(__name__)
