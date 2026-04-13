@@ -7,7 +7,7 @@ import os
 from sklearn.preprocessing import MinMaxScaler
 ##
 import time
-import random
+from datetime import datetime
 import threading
 from collections import defaultdict
 from scapy.all import sniff, IP, TCP, UDP
