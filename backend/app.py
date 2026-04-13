@@ -210,7 +210,11 @@ def sniff_traffic():
     global monitoring_active
     try:
         # Filter can be adapted, right now sniffs IP packets
-        sniff(prn=process_packet, store=False)
+        print("Starting packet capture on eth0...")
+        sniff( iface="eth0",     
+            prn=process_packet,
+            store=False,
+            filter="ip"   )
     except Exception as e:
         print(f"Sniffing error: {e}")
 
@@ -236,17 +240,19 @@ def analyze_flows():
                 if flow['fwd_pkts'] < 2:
                     continue
 
-                dst_port = flow_key[2]  # fwd_key = (src, sport, dst, dport)
                 dst_port = flow_key[3]
                 features = extract_features(flow, dst_port)
 
-                import pandas as pd
+                 print(f"Analyzing flow: {flow_key[0]}:{flow_key[1]} -> "
+                      f"{flow_key[2]}:{flow_key[3]} | "
+                      f"fwd:{flow['fwd_pkts']} bwd:{flow['bwd_pkts']}")
+
                 df         = pd.DataFrame([features])
                 df_scaled  = scaler.transform(df)
-
                 prediction = model.predict(df_scaled)[0]
                 risk_level = "BENIGN" if prediction == 0 else "ATTACK"
 
+                 print(f"Prediction: {risk_level}")
 
                 new_entry = {
                     "time"         : datetime.now().strftime("%H:%M:%S"),
@@ -257,9 +263,7 @@ def analyze_flows():
                     "risk_level"   : risk_level,
                     "prediction"   : int(prediction)
                 }
-                print(f"Features: {features}")
-                print(f"Scaled: {df_scaled}")
-                print(f"Prediction: {prediction}")
+            
 
                 realtime_data.append(new_entry)
                 if len(realtime_data) > 50:
