@@ -59,7 +59,7 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
 
   return (
     <div className="group bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-purple-500/30 rounded-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)] relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       {/* Main Card Content */}
       <div className="flex flex-col md:flex-row gap-6 p-6">
@@ -158,7 +158,7 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
             className={`flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl transition-all shadow-lg active:scale-95 ${
               verifyingId === buildId
                 ? "bg-gray-600 text-gray-300 cursor-wait"
-                : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white"
+                : "bg-blue-500 hover:bg-blue-800 text-white"
             }`}
           >
             {verifyingId === buildId ? (

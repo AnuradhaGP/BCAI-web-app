@@ -24,7 +24,6 @@ const AiDashboard = () => {
   const [liveData, setLiveData] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const HOST = "http://206.189.128.176:5000/";
-  const socket = io(HOST);
 
   const addAlert = (alert) => {
     setAlerts((prev) => [alert, ...prev].slice(0, 5));
@@ -36,6 +35,8 @@ const AiDashboard = () => {
 
   //handle alearts
   useEffect(() => {
+    const socket = io(HOST);
+
     socket.on("attack_alert", (data) => {
       addAlert({
         type: "error",
@@ -133,7 +134,7 @@ const AiDashboard = () => {
           <Layers size={12} />
           <span>AI Anomaly Detector v1.0</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-gray-500">
+        <h1 className="text-4xl md:text-5xl font-bold ">
           Network Traffic Analysis
         </h1>
         <p className="text-gray-400 max-w-lg mx-auto">
@@ -144,7 +145,7 @@ const AiDashboard = () => {
 
       {/* LIVE MONITORING SECTION */}
       <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-50"></div>
+        <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
