@@ -243,16 +243,14 @@ def analyze_flows():
                 dst_port = flow_key[3]
                 features = extract_features(flow, dst_port)
 
-                 print(f"Analyzing flow: {flow_key[0]}:{flow_key[1]} -> "
-                      f"{flow_key[2]}:{flow_key[3]} | "
-                      f"fwd:{flow['fwd_pkts']} bwd:{flow['bwd_pkts']}")
+                print(f"Analyzing flow: {flow_key[0]}:{flow_key[1]} -> "f"{flow_key[2]}:{flow_key[3]} | "f"fwd:{flow['fwd_pkts']} bwd:{flow['bwd_pkts']}")
 
-                df         = pd.DataFrame([features])
+                df = pd.DataFrame([features])
                 df_scaled  = scaler.transform(df)
                 prediction = model.predict(df_scaled)[0]
                 risk_level = "BENIGN" if prediction == 0 else "ATTACK"
-
-                 print(f"Prediction: {risk_level}")
+                
+                print(f"Prediction: {risk_level}")
 
                 new_entry = {
                     "time"         : datetime.now().strftime("%H:%M:%S"),
@@ -270,8 +268,7 @@ def analyze_flows():
                     realtime_data.pop(0)
 
                 if risk_level == "ATTACK":
-                    print(f"ATTACK detected! Port: {dst_port}, "
-                          f"Pkts: {flow['fwd_pkts']}, Features: {features}")
+                    print(f"ATTACK detected! Port: {dst_port}, "f"Pkts: {flow['fwd_pkts']}, Features: {features}")
 
             except Exception as e:
                 print(f"Flow analysis error: {e}")
