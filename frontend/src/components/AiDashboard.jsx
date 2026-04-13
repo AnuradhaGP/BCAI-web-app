@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { io } from "socket.io-client";
 import PacketForm from "./PacketForm";
 import ResultCard from "./ResultCard";
 import { Layers, Activity, ActivitySquare, Play, Square } from "lucide-react";
@@ -20,7 +21,31 @@ const AiDashboard = () => {
   // Live Monitoring capabilities
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [liveData, setLiveData] = useState([]);
+  const [alerts, setAlerts] = useState([]);
   const HOST = "http://206.189.128.176:5000/";
+
+  //handle alearts
+  useEffect(() => {
+    socket.on("attack_alert", (data) => {
+      const newAlert = {
+        id: Date.now(),
+        message: data.message,
+        src_ip: data.src_ip,
+        port: data.dst_port,
+        pkts: data.fwd_pkts,
+        time: data.time,
+      };
+
+      setAlerts((prev) => [newAlert, ...prev].slice(0, 5));
+
+      // 8 seconds auto remove
+      setTimeout(() => {
+        setAlerts((prev) => prev.filter((a) => a.id !== newAlert.id));
+      }, 8000);
+    });
+
+    return () => socket.off("attack_alert");
+  }, []);
 
   useEffect(() => {
     // Fetch initial status
@@ -100,6 +125,30 @@ const AiDashboard = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8 animate-fade-in-up">
+      {/*  Attack Alerts Overlay */}
+      <div className="fixed top-24 right-6 z-50 flex flex-col gap-2 w-80 pointer-events-none">
+        {alerts.map((alert) => (
+          <div
+            key={alert.id}
+            className="pointer-events-auto p-4 rounded-xl shadow-2xl border backdrop-blur-md bg-red-500/90 border-red-400 text-white"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={20} className="shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-sm">Attack Detected!</h4>
+                <p className="text-xs opacity-90 mt-1">{alert.message}</p>
+                <div className="text-[10px] mt-2 font-mono bg-black/20 p-1.5 rounded space-y-0.5">
+                  <p>Source: {alert.src_ip}</p>
+                  <p>Port: {alert.port}</p>
+                  <p>Packets: {alert.pkts}</p>
+                  <p>Time: {alert.time}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <header className="mb-10 text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-primary-400 mb-4">
           <Layers size={12} />

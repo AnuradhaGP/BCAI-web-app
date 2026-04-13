@@ -9,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 import time
 from datetime import datetime
 import threading
+from flask_socketio import SocketIO  
 from collections import defaultdict
 from scapy.all import sniff, IP, TCP, UDP
 ##
@@ -16,6 +17,7 @@ from scapy.all import sniff, IP, TCP, UDP
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Load model
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -289,7 +291,13 @@ def analyze_flows():
                     realtime_data.pop(0)
 
                 if risk_level == "ATTACK":
-                    print(f"ATTACK detected! Port: {dst_port}, "f"Pkts: {flow['fwd_pkts']}, Features: {features}")
+                    socketio.emit('attack_alert', {
+                        "src_ip"  : flow_key[0],
+                        "dst_port": dst_port,
+                        "fwd_pkts": flow['fwd_pkts'],
+                        "time"    : new_entry["time"],
+                        "message" : f"Attack detected from {flow_key[0]} → port {dst_port}"
+                    })
 
             except Exception as e:
                 print(f"Flow analysis error: {e}")
@@ -319,4 +327,4 @@ def get_monitoring_data():
     return jsonify({"data": realtime_data})
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    socketio.run(app,host="0.0.0.0", port=5000, debug=True)
