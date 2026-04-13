@@ -24,7 +24,7 @@ const AiDashboard = () => {
   const [liveData, setLiveData] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const HOST = "http://206.189.128.176:5000/";
-  const socket = io(HOST, { transports: ["websocket"] });
+  const socket = io(HOST);
 
   const addAlert = (alert) => {
     setAlerts((prev) => [alert, ...prev].slice(0, 5));
