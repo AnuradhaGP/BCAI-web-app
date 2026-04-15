@@ -42,8 +42,8 @@ const AiDashboard = () => {
         type: "error",
         message: data.message,
         details: data.build_stopped
-            ? `Pipeline stopped! Source: ${data.src_ip} | Port: ${data.dst_port}`
-            : `Source: ${data.src_ip} | Port: ${data.dst_port}`,
+          ? `Pipeline stopped! Source: ${data.src_ip} | Port: ${data.dst_port}`
+          : `Source: ${data.src_ip} | Port: ${data.dst_port}`,
       });
     });
 
