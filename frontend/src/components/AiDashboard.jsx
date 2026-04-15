@@ -41,7 +41,9 @@ const AiDashboard = () => {
       addAlert({
         type: "error",
         message: data.message,
-        details: `Source: ${data.src_ip} | Port: ${data.dst_port} | Packets: ${data.fwd_pkts}`,
+        details: data.build_stopped
+            ? `Pipeline stopped! Source: ${data.src_ip} | Port: ${data.dst_port}`
+            : `Source: ${data.src_ip} | Port: ${data.dst_port}`,
       });
     });
 
@@ -143,7 +145,7 @@ const AiDashboard = () => {
         </p>
       </header>
 
-      {/* LIVE MONITORING SECTION */}
+      {/* live monitoring section */}
       <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">

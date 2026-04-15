@@ -11,7 +11,7 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
       <div className="max-w-5xl mx-auto">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 flex items-center justify-between shadow-lg">
-          {/* Logo / Brand */}
+          {/* Logo */}
           <div className="flex items-center gap-3">
             <div>
               <img src="/logo.png" alt="Logo" className="h-12 w-auto" />

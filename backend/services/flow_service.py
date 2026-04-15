@@ -3,7 +3,8 @@ import threading
 import time
 from datetime import datetime
 from config import FLOW_WINDOW_SECS, MAX_REALTIME_ITEMS, MIN_PKTS_TO_ANALYZE
-
+from services.jenkins_service import jenkins_service
+import threading
 class FlowService:
     def __init__(self):
         self.flows        = {}
@@ -18,7 +19,7 @@ class FlowService:
         self._socketio  = socketio
         threading.Thread(target=self._analyze_loop, daemon=True).start()
 
-    # ── Packet handler ────────────────────────────────
+    # Packet handler 
     def process_packet(self, src, dst, sport, dport,
                        length, ts, is_tcp, win=0):
         fwd_key = (src, sport, dst, dport)
@@ -73,7 +74,7 @@ class FlowService:
             if is_tcp and flow['bwd_pkts'] == 1:
                 flow['init_bwd_win'] = win
 
-    # ── Feature extraction ────────────────────────────
+    # Feature extraction 
     def extract_features(self, flow, dst_port) -> dict:
         duration    = max(flow['last_time'] - flow['start_time'], 1e-6)
         total_pkts  = flow['fwd_pkts'] + flow['bwd_pkts']
@@ -108,7 +109,7 @@ class FlowService:
             'Bwd IAT Mean'     : mean(flow['bwd_iats']),
         }
 
-    # ── Analysis loop ─────────────────────────────────
+    #Analysis loop
     def _analyze_loop(self):
         while True:
             time.sleep(FLOW_WINDOW_SECS)
@@ -153,12 +154,18 @@ class FlowService:
                         self.realtime_data.pop(0)
 
                     if result['risk_level'] == "ATTACK" and self._socketio:
+                        threading.Thread(
+                            target = jenkins_service.stop_running_builds,
+                            daemon = True
+                        ).start()
+
                         self._socketio.emit('attack_alert', {
                             "src_ip"  : flow_key[0],
                             "dst_port": dst_port,
                             "fwd_pkts": flow['fwd_pkts'],
                             "time"    : entry["time"],
-                            "message" : f"Attack from {flow_key[0]} → port {dst_port}"
+                            "message" : f"Attack from {flow_key[0]} → port {dst_port}",
+                            "build_stopped": True
                         })
 
                 except Exception as e:
@@ -168,6 +175,5 @@ class FlowService:
         with self.lock:
             self.flows.clear()
         self.realtime_data.clear()
-
 
 flow_service = FlowService()

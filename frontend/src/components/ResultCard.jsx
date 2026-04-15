@@ -1,4 +1,3 @@
-// src/components/ResultCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertTriangle, AlertOctagon } from 'lucide-react';

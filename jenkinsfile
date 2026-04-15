@@ -40,11 +40,10 @@ pipeline {
     post {
         always {
             echo "Deployment pipeline execution completed."
-            // You can uncomment below to clean up dangling images to save space on Droplet
-            // sh 'docker image prune -f'
+           
         }
         success {
-            echo "Successfully deployed BCAI Web App to DigitalOcean Droplet!"
+            echo "Successfully deployed BCAI Web App "
         }
         failure {
             echo "Deployment failed. Please check the Jenkins logs."

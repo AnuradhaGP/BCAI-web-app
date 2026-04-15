@@ -47,7 +47,7 @@ const PacketForm = ({ onPredict, isLoading }) => {
       try {
         if (jsonInput.trim()) {
           const parsed = JSON.parse(jsonInput);
-          // Ensure we keep the structure even if JSON is partial
+          // Ensure keep the structure even if JSON is partial
           setFormData((prev) => ({ ...prev, ...parsed }));
         }
       } catch (e) {

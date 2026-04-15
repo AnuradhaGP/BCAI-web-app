@@ -25,7 +25,6 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
   const [logError, setLogError] = useState(null);
 
   const handleLogToggle = async () => {
-    // දෙවන click → close
     if (logOpen) {
       setLogOpen(false);
       return;
@@ -33,7 +32,7 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
 
     setLogOpen(true);
 
-    // Already loaded නම් fetch නොකරනවා
+    //if already loaded ignore fetch
     if (logContent) return;
 
     if (!record.logCid) {
@@ -45,7 +44,7 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
     setLogError(null);
 
     try {
-      // Backend decrypt endpoint එකෙන් ගන්නවා
+      // taking backend decrypt endpoint 
       const response = await axios.get(
         `${BACKEND_URL}/api/v1/log/${record.logCid}`,
       );
@@ -114,7 +113,7 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
               </p>
             </div>
 
-            {/* Log CID - clickable accordion trigger */}
+            {/* Log CID clickable accordion trigger */}
             <div
               onClick={handleLogToggle}
               className="bg-black/30 rounded-lg p-3 border border-white/5 hover:border-blue-500/40 transition-colors cursor-pointer group/log"
@@ -171,7 +170,7 @@ const BuildCard = ({ item, verifyingId, onVerify }) => {
         </div>
       </div>
 
-      {/* Accordion - Log Viewer */}
+      {/* Accordion Log Viewer */}
       {logOpen && (
         <div className="border-t border-white/10 mx-6 mb-6">
           <div className="mt-4">
