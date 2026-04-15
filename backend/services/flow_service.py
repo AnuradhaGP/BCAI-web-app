@@ -129,6 +129,10 @@ class FlowService:
                         continue
 
                     dst_port = flow_key[3]
+
+                    if dst_port != 8080:
+                        continue
+
                     features = self.extract_features(flow, dst_port)
                     result   = self._model_svc.predict_flow(features)
 
