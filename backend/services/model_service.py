@@ -38,9 +38,14 @@ class ModelService:
         if not self.is_ready:
             raise RuntimeError("Model not loaded")
 
-        df     = pd.DataFrame([features])
+        df     = pd.DataFrame([[features[name] for name in FEATURE_NAMES]], columns=FEATURE_NAMES)
         scaled = self.scaler.transform(df)
-        pred   = int(self.model.predict(scaled)[0])
+
+        proba  = self.model.predict_proba(scaled)[0]
+        attack_prob = proba[1]
+    
+        ATTACK_THRESHOLD = 0.7
+        pred = 1 if attack_prob >= ATTACK_THRESHOLD else 0
 
         return {
             "prediction": pred,

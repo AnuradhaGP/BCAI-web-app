@@ -17,7 +17,6 @@ class JenkinsService:
         self._cooldown_secs = 30   # 30 seconds cooldown
         self._lock = threading.Lock()
 
-
     def _get_crumb(self):
         try:
             res = requests.get(
