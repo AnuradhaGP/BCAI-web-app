@@ -4,18 +4,26 @@ import time
 from datetime import datetime
 from config import FLOW_WINDOW_SECS, MAX_REALTIME_ITEMS, MIN_PKTS_TO_ANALYZE
 from services.jenkins_service import jenkins_service
+from collections import deque
 import threading
+from concurrent.futures import ThreadPoolExecutor
 class FlowService:
     def __init__(self):
         self.flows        = {}
         self.lock         = threading.Lock()
-        self.realtime_data= []
+        self._data_lock     = threading.Lock()
+        self.realtime_data  = deque(maxlen=MAX_REALTIME_ITEMS)
         self.active       = False
         self._model_svc   = None
         self._socketio    = None
         self._attack_count  = 0
         self._attack_threshold = 3 
         self._last_attack_reset = time.time()
+
+        # Fixed thread pool
+        self._executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="flow_worker")
+        # for Jenkins calls separate single thread executor
+        self._jenkins_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="jenkins")
 
     def init(self, model_service, socketio):
         self._model_svc = model_service
@@ -127,63 +135,137 @@ class FlowService:
                 snapshot = dict(self.flows)
                 self.flows.clear()
 
+            features = []
             for flow_key, flow in snapshot.items():
+                if flow['fwd_pkts'] < MIN_PKTS_TO_ANALYZE:
+                    continue
+                feature =self._executor.submit(self._analyze_flow, flow_key, flow)
+                features.append(feature)
+
+            for f in features:
                 try:
-                    if flow['fwd_pkts'] < MIN_PKTS_TO_ANALYZE:
-                        continue
-
-                    dst_port = flow_key[3]
-
-                    features = self.extract_features(flow, dst_port)
-                    result   = self._model_svc.predict_flow(features)
-
-
-                    entry = {
-                        "time"         : datetime.now().strftime("%H:%M:%S"),
-                        "src_ip"       : flow_key[0],
-                        "dst_port"     : dst_port,
-                        "flow_duration": round(flow['last_time'] - flow['start_time'], 4),
-                        "fwd_pkts"     : flow['fwd_pkts'],
-                        "bwd_pkts"     : flow['bwd_pkts'],
-                        "risk_level"   : result['risk_level'],
-                        "prediction"   : result['prediction'],
-                    }
-
-                    self.realtime_data.append(entry)
-                    if len(self.realtime_data) > MAX_REALTIME_ITEMS:
-                        self.realtime_data.pop(0)
-
-                    if result['risk_level'] == "ATTACK":
-                        self._attack_count += 1
-
-                        # Reset counter every 30 seconds
-                        if time.time() - self._last_attack_reset > 30:
-                            self._attack_count = 0
-                            self._last_attack_reset = time.time()
-
-                        #stop jenkins if the attack threshold exceeded
-                        if self._attack_count >= self._attack_threshold:
-                            threading.Thread(
-                                target=jenkins_service.stop_running_builds,
-                                daemon=True
-                            ).start()
-                            self._attack_count = 0  # Reset after action
-                        if self._socketio:
-                            self._socketio.emit('attack_alert', {
-                                "src_ip"  : flow_key[0],
-                                "dst_port": dst_port,
-                                "fwd_pkts": flow['fwd_pkts'],
-                                "time"    : entry["time"],
-                                "message" : f"Attack from {flow_key[0]} → port {dst_port}",
-                                "build_stopped": self._attack_count == 0
-                            })
-
+                    f.result(timeout=FLOW_WINDOW_SECS)
                 except Exception as e:
-                    print(f"Flow analysis error: {e}")
+                    print(f"Flow worker error: {e}")
+
+    def _analyze_flow(self, flow_key, flow):
+        try:
+            dst_port = flow_key[3]
+            features = self.extract_features(flow, dst_port)
+            result   = self._model_svc.predict_flow(features)
+
+            entry = {
+                "time"         : datetime.now().strftime("%H:%M:%S"),
+                "src_ip"       : flow_key[0],
+                "dst_port"     : dst_port,
+                "flow_duration": round(flow['last_time'] - flow['start_time'], 4),
+                "fwd_pkts"     : flow['fwd_pkts'],
+                "bwd_pkts"     : flow['bwd_pkts'],
+                "risk_level"   : result['risk_level'],
+                "prediction"   : result['prediction'],
+            }
+
+            # Separate lock for realtime_data
+            with self._data_lock:
+                self.realtime_data.append(entry)
+
+            if result['risk_level'] == "ATTACK":
+                self._handle_attack(flow_key, flow, entry)
+
+        except Exception as e:
+            print(f"Flow analysis error: {e}")
+
+    def _handle_attack(self, flow_key, flow, entry):
+        with self.lock:
+            now = time.time()
+            if now - self._last_attack_reset > 30:
+                self._attack_count = 0
+                self._last_attack_reset = now
+
+            self._attack_count += 1
+            should_stop = self._attack_count >= self._attack_threshold
+
+            if should_stop:
+                self._attack_count = 0
+
+        if should_stop:
+            # Single-thread executor - duplicate calls block වෙනවා, spawn නොවෙනවා
+            self._jenkins_executor.submit(jenkins_service.stop_running_builds)
+
+        if self._socketio:
+            self._socketio.emit('attack_alert', {
+                "src_ip"       : flow_key[0],
+                "dst_port"     : entry["dst_port"],
+                "fwd_pkts"     : flow['fwd_pkts'],
+                "time"         : entry["time"],
+                "message"      : f"Attack from {flow_key[0]} → port {entry['dst_port']}",
+                "build_stopped": should_stop,
+            })
+
+
+            # for flow_key, flow in snapshot.items():
+            #     try:
+            #         if flow['fwd_pkts'] < MIN_PKTS_TO_ANALYZE:
+            #             continue
+
+            #         dst_port = flow_key[3]
+
+            #         features = self.extract_features(flow, dst_port)
+            #         result   = self._model_svc.predict_flow(features)
+
+
+            #         entry = {
+            #             "time"         : datetime.now().strftime("%H:%M:%S"),
+            #             "src_ip"       : flow_key[0],
+            #             "dst_port"     : dst_port,
+            #             "flow_duration": round(flow['last_time'] - flow['start_time'], 4),
+            #             "fwd_pkts"     : flow['fwd_pkts'],
+            #             "bwd_pkts"     : flow['bwd_pkts'],
+            #             "risk_level"   : result['risk_level'],
+            #             "prediction"   : result['prediction'],
+            #         }
+
+            #         self.realtime_data.append(entry)
+            #         if len(self.realtime_data) > MAX_REALTIME_ITEMS:
+            #             self.realtime_data.pop(0)
+
+            #         if result['risk_level'] == "ATTACK":
+            #             self._attack_count += 1
+
+            #             # Reset counter every 30 seconds
+            #             if time.time() - self._last_attack_reset > 30:
+            #                 self._attack_count = 0
+            #                 self._last_attack_reset = time.time()
+
+            #             #stop jenkins if the attack threshold exceeded
+            #             if self._attack_count >= self._attack_threshold:
+            #                 threading.Thread(
+            #                     target=jenkins_service.stop_running_builds,
+            #                     daemon=True
+            #                 ).start()
+            #                 self._attack_count = 0  # Reset after action
+            #             if self._socketio:
+            #                 self._socketio.emit('attack_alert', {
+            #                     "src_ip"  : flow_key[0],
+            #                     "dst_port": dst_port,
+            #                     "fwd_pkts": flow['fwd_pkts'],
+            #                     "time"    : entry["time"],
+            #                     "message" : f"Attack from {flow_key[0]} → port {dst_port}",
+            #                     "build_stopped": self._attack_count == 0
+            #                 })
+
+            #     except Exception as e:
+            #         print(f"Flow analysis error: {e}")
 
     def reset(self):
         with self.lock:
             self.flows.clear()
-        self.realtime_data.clear()
+        with self._data_lock:
+            self.realtime_data.clear()
+
+    def shutdown(self):
+        self._executor.shutdown(wait=False)
+        self._jenkins_executor.shutdown(wait=False)
+
 
 flow_service = FlowService()
