@@ -13,6 +13,9 @@ class FlowService:
         self.active       = False
         self._model_svc   = None
         self._socketio    = None
+        self._attack_count  = 0
+        self._attack_threshold = 3 
+        self._last_attack_reset = time.time()
 
     def init(self, model_service, socketio):
         self._model_svc = model_service
@@ -155,10 +158,20 @@ class FlowService:
                         self.realtime_data.pop(0)
 
                     if result['risk_level'] == "ATTACK" and self._socketio:
-                        threading.Thread(
-                            target = jenkins_service.stop_running_builds,
-                            daemon = True
-                        ).start()
+                        self._attack_count += 1
+
+                        # Reset counter every 30 seconds
+                        if time.time() - self._last_attack_reset > 30:
+                        self._attack_count      = 0
+                        self._last_attack_reset = time.time()
+
+                        #stop jenkins if the attack threshold exceeded
+                        if self._attack_count >= self._attack_threshold:
+                            threading.Thread(
+                                target=jenkins_service.stop_running_builds,
+                                daemon=True
+                            ).start()
+                            self._attack_count = 0  # Reset after action
 
                         self._socketio.emit('attack_alert', {
                             "src_ip"  : flow_key[0],
@@ -166,7 +179,7 @@ class FlowService:
                             "fwd_pkts": flow['fwd_pkts'],
                             "time"    : entry["time"],
                             "message" : f"Attack from {flow_key[0]} → port {dst_port}",
-                            "build_stopped": True
+                            "build_stopped": self._attack_count == 0
                         })
 
                 except Exception as e:

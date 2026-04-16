@@ -2,14 +2,21 @@
 import requests
 from requests.auth import HTTPBasicAuth
 from config import JENKINS_URL,JENKINS_USER,JENKINS_API_TOKEN,JENKINS_JOB_NAME
+import time
+import threading
+import os
 
 class JenkinsService:
     def __init__(self):
-        self.url   = JENKINS_URL
-        self.user  = JENKINS_USER
+        self.url = JENKINS_URL
+        self.user = JENKINS_USER
         self.token = JENKINS_API_TOKEN
-        self.job   = JENKINS_JOB_NAME
-        self.auth  = HTTPBasicAuth(self.user, self.token)
+        self.job = JENKINS_JOB_NAME
+        self.auth = HTTPBasicAuth(self.user, self.token)
+        self._last_stop = 0
+        self._cooldown_secs = 30   # 30 seconds cooldown
+        self._lock = threading.Lock()
+
 
     def _get_crumb(self):
         try:
@@ -24,6 +31,15 @@ class JenkinsService:
             return {}
 
     def stop_running_builds(self):
+        with self._lock:
+            now = time.time()
+            if now - self._last_stop < self._cooldown_secs:
+                remaining = int(self._cooldown_secs - (now - self._last_stop))
+                print(f"Cooldown active - {remaining}s remaining, skip stop")
+                return []
+
+            self._last_stop = now
+
         try:
             # get Running builds list 
             res = requests.get(
