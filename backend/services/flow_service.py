@@ -133,6 +133,7 @@ class FlowService:
                 if not self.flows:
                     continue
                 snapshot = dict(self.flows)
+                print(f"Captured {len(snapshot)} unique flows in the last window.")
                 self.flows.clear()
             print(f"Total flows captured in window: {len(snapshot)}")
             features = []
