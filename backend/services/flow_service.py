@@ -134,7 +134,7 @@ class FlowService:
                     continue
                 snapshot = dict(self.flows)
                 self.flows.clear()
-
+            print(f"Total flows captured in window: {len(snapshot)}")
             features = []
             for flow_key, flow in snapshot.items():
                 if flow['fwd_pkts'] < MIN_PKTS_TO_ANALYZE:
