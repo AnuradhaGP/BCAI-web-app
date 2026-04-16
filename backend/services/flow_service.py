@@ -23,8 +23,7 @@ class FlowService:
         threading.Thread(target=self._analyze_loop, daemon=True).start()
 
     # Packet handler 
-    def process_packet(self, src, dst, sport, dport,
-                       length, ts, is_tcp, win=0):
+    def process_packet(self, src, dst, sport, dport,length, ts, is_tcp, win=0):
         fwd_key = (src, sport, dst, dport)
         bwd_key = (dst, dport, src, sport)
 
@@ -136,11 +135,6 @@ class FlowService:
                     features = self.extract_features(flow, dst_port)
                     result   = self._model_svc.predict_flow(features)
 
-                    print(f"{flow_key[0]}:{flow_key[1]} → "
-                          f"{flow_key[2]}:{dst_port} | "
-                          f"fwd:{flow['fwd_pkts']} "
-                          f"bwd:{flow['bwd_pkts']} | "
-                          f"{result['risk_level']}")
 
                     entry = {
                         "time"         : datetime.now().strftime("%H:%M:%S"),
@@ -157,13 +151,13 @@ class FlowService:
                     if len(self.realtime_data) > MAX_REALTIME_ITEMS:
                         self.realtime_data.pop(0)
 
-                    if result['risk_level'] == "ATTACK" and self._socketio:
+                    if result['risk_level'] == "ATTACK":
                         self._attack_count += 1
 
                         # Reset counter every 30 seconds
                         if time.time() - self._last_attack_reset > 30:
-                        self._attack_count      = 0
-                        self._last_attack_reset = time.time()
+                            self._attack_count = 0
+                            self._last_attack_reset = time.time()
 
                         #stop jenkins if the attack threshold exceeded
                         if self._attack_count >= self._attack_threshold:
@@ -172,15 +166,15 @@ class FlowService:
                                 daemon=True
                             ).start()
                             self._attack_count = 0  # Reset after action
-
-                        self._socketio.emit('attack_alert', {
-                            "src_ip"  : flow_key[0],
-                            "dst_port": dst_port,
-                            "fwd_pkts": flow['fwd_pkts'],
-                            "time"    : entry["time"],
-                            "message" : f"Attack from {flow_key[0]} → port {dst_port}",
-                            "build_stopped": self._attack_count == 0
-                        })
+                        if self._socketio:
+                            self._socketio.emit('attack_alert', {
+                                "src_ip"  : flow_key[0],
+                                "dst_port": dst_port,
+                                "fwd_pkts": flow['fwd_pkts'],
+                                "time"    : entry["time"],
+                                "message" : f"Attack from {flow_key[0]} → port {dst_port}",
+                                "build_stopped": self._attack_count == 0
+                            })
 
                 except Exception as e:
                     print(f"Flow analysis error: {e}")
