@@ -73,7 +73,8 @@ class FlowService:
         else:
             flow['bwd_pkts']  += 1
             flow['bwd_bytes'] += length
-            flow['bwd_pkt_lens'].append(length
+            flow['bwd_pkt_lens'].append(length)
+
             flow['bwd_iats'].append(ts - flow['last_bwd_time'])
             flow['last_bwd_time'] = ts
             if is_tcp and flow['bwd_pkts'] == 1:
