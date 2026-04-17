@@ -20,6 +20,4 @@ def toggle():
 
 @monitoring_bp.route('/data', methods=['GET'])
 def data():
-    with flow_service._data_lock:
-        current_data = list(flow_service.realtime_data)
-    return jsonify({"data": current_data})
+    return jsonify({"data": flow_service.realtime_data})
