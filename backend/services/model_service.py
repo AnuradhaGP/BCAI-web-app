@@ -38,7 +38,7 @@ class ModelService:
         if not self.is_ready:
             raise RuntimeError("Model not loaded")
 
-        df     = pd.DataFrame([[features[name] for name in FEATURE_NAMES]], columns=FEATURE_NAMES)
+        df     = pd.DataFrame([features])
         scaled = self.scaler.transform(df)
 
         proba  = self.model.predict_proba(scaled)[0]
