@@ -66,17 +66,15 @@ class FlowService:
             flow['fwd_pkts']  += 1
             flow['fwd_bytes'] += length
             flow['fwd_pkt_lens'].append(length)
-            if flow['fwd_pkts'] > 1:
-                flow['fwd_iats'].append(ts - flow['last_fwd_time'])
+            flow['fwd_iats'].append(ts - flow['last_fwd_time'])
             flow['last_fwd_time'] = ts
             if is_tcp and flow['fwd_pkts'] == 1:
                 flow['init_fwd_win'] = win
         else:
             flow['bwd_pkts']  += 1
             flow['bwd_bytes'] += length
-            flow['bwd_pkt_lens'].append(length)
-            if flow['bwd_pkts'] > 1:
-                flow['bwd_iats'].append(ts - flow['last_bwd_time'])
+            flow['bwd_pkt_lens'].append(length
+            flow['bwd_iats'].append(ts - flow['last_bwd_time'])
             flow['last_bwd_time'] = ts
             if is_tcp and flow['bwd_pkts'] == 1:
                 flow['init_bwd_win'] = win
