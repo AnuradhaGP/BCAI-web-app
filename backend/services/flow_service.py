@@ -140,8 +140,14 @@ class FlowService:
                     dst_port = flow_key[3]
 
                     features = self.extract_features(flow, dst_port)
-                    result   = self._model_svc.predict_flow(features)
 
+                    # Pass flow metadata for heuristic SYN/flood pre-check
+                    flow_meta = {
+                        'fwd_pkts': flow['fwd_pkts'],
+                        'bwd_pkts': flow['bwd_pkts'],
+                        'duration': max(flow['last_time'] - flow['start_time'], 1e-6),
+                    }
+                    result = self._model_svc.predict_flow(features, flow_meta=flow_meta)
 
                     entry = {
                         "time"         : datetime.now().strftime("%H:%M:%S"),
@@ -152,6 +158,7 @@ class FlowService:
                         "bwd_pkts"     : flow['bwd_pkts'],
                         "risk_level"   : result['risk_level'],
                         "prediction"   : result['prediction'],
+                        "detect_method": result.get('method', 'ml_model'),
                     }
 
                     self.realtime_data.append(entry)
